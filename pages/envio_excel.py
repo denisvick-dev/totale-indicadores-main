@@ -204,6 +204,7 @@ total_virtua = cons["TIPO SERVIÇO"].fillna("").astype(str).str.contains("MEGA|G
 combinado_virtua = total_virtua.astype(int)
 somente_virtua = total_virtua.astype(int) * cons["QTDE_PRODUTOS"].fillna(0).astype(int)
 
+# Criação das colunas
 cons["QTDE_TV"] = np.where(combinado, combinado_tv, somente_tv)
 cons["QTDE_VIRTUA"] = np.where(combinado, combinado_virtua, somente_virtua)
 cons["QTDE_MESH"] = cons["QTDE_PRODUTOS"] - cons["QTDE_TV"] - cons["QTDE_VIRTUA"]
