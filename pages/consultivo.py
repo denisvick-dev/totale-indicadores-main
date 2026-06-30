@@ -46,6 +46,18 @@ consultivo["Qtde. Prod."] = (
     pd.to_numeric(consultivo["QTDE_PRODUTOS"], errors="coerce").fillna(0).astype(int)
 )
 
+consultivo["Qtde. Mesh"] = (
+    pd.to_numeric(consultivo["QTDE_MESH"], errors="coerce").fillna(0).astype(int)
+)
+
+consultivo["Qtde. TV"] = (
+    pd.to_numeric(consultivo["QTDE_TV"], errors="coerce").fillna(0).astype(int)
+)
+
+consultivo["Qtde. Virtua"] = (
+    pd.to_numeric(consultivo["QTDE_VIRTUA"], errors="coerce").fillna(0).astype(int)
+)
+
 df = pd.DataFrame(consultivo)
 
 # =========================================
@@ -219,7 +231,7 @@ if all(col in df.columns for col in colunas_obrigatorias):
 
     total_consultivos = (
         df.groupby(["LOGIN NETSALES", "VENDEDOR", "Monitor", "Base"])[
-            ["Qtde. Cons.", "Qtde. Prod."]
+            ["Qtde. Cons.", "Qtde. Prod.", "Qtde. Mesh", "Qtde. TV", "Qtde. Virtua"]
         ]
         .sum()
         .reset_index()
@@ -230,7 +242,13 @@ if all(col in df.columns for col in colunas_obrigatorias):
     total_consultivos.insert(0, "Posição", range(1, len(total_consultivos) + 1))
 
     total_consultivos = total_consultivos.rename(
-        columns={"Qtde. Cons.": "Total Consultivos", "Qtde. Prod.": "Total Produtos"}
+        columns={
+            "Qtde. Cons.": "Total Consultivos",
+            "Qtde. Prod.": "Total Produtos",
+            "Qtde. Mesh": "Mesh",
+            "Qtde. TV": "TV Box",
+            "Qtde. Virtua": "Virtua",
+        }
     )
 
     total_consultivos["LOGIN NETSALES"] = total_consultivos["LOGIN NETSALES"].astype(
@@ -246,9 +264,14 @@ if all(col in df.columns for col in colunas_obrigatorias):
     total_consultivos["Total Produtos"] = total_consultivos["Total Produtos"].astype(
         int
     )
+    total_consultivos["Mesh"] = total_consultivos["Mesh"].astype(int)
+    total_consultivos["TV Box"] = total_consultivos["TV Box"].astype(int)
+    total_consultivos["Virtua"] = total_consultivos["Virtua"].astype(int)
 
     total_consultivos_por_monitor = (
-        df.groupby(["Monitor"])[["Qtde. Cons.", "Qtde. Prod."]]
+        df.groupby(["Monitor"])[
+            ["Qtde. Cons.", "Qtde. Prod.", "Qtde. Mesh", "Qtde. TV", "Qtde. Virtua"]
+        ]
         .sum()
         .reset_index()
         .sort_values("Qtde. Prod.", ascending=False)
@@ -262,6 +285,9 @@ if all(col in df.columns for col in colunas_obrigatorias):
         columns={
             "Qtde. Cons.": "Total Consultivos",
             "Qtde. Prod.": "Total Produtos",
+            "Qtde. Mesh": "Mesh",
+            "Qtde. TV": "TV Box",
+            "Qtde. Virtua": "Virtua",
         }
     )
     total_consultivos_por_monitor["Monitor"] = total_consultivos_por_monitor[
@@ -276,6 +302,9 @@ if all(col in df.columns for col in colunas_obrigatorias):
     total_consultivos_por_monitor["Total Produtos"] = total_consultivos_por_monitor[
         "Total Produtos"
     ].astype(int)
+    total_consultivos_por_monitor["Mesh"] = total_consultivos_por_monitor["Mesh"].astype(int)
+    total_consultivos_por_monitor["TV Box"] = total_consultivos_por_monitor["TV Box"].astype(int)
+    total_consultivos_por_monitor["Virtua"] = total_consultivos_por_monitor["Virtua"].astype(int)
 
 else:
     st.error(

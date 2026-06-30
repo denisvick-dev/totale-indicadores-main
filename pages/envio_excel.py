@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import time
 import re
+import numpy as np
 from datetime import datetime, timezone, timedelta
 
 # =========================================
@@ -141,10 +142,6 @@ cons.columns = cons.columns.str.strip()
 # CRIAÇÃO DE VARIÁVEIS
 # =========================================
 
-# Consultivos
-if {"PLANO TV", "PLANO INTERNET"}.issubset(cons.columns):
-    cons["QTDE_CONSULTIVO"] = (cons[["PLANO TV", "PLANO INTERNET"]] != "-").sum(axis=1)
-
 # Produtos
 if "OBSERVACAO" in cons.columns:
     cons["LISTA_PRODUTOS"] = (
@@ -154,11 +151,17 @@ if "OBSERVACAO" in cons.columns:
 else:
     cons["LISTA_PRODUTOS"] = [list() for _ in range(len(cons))]
     cons["QTDE_PRODUTOS"] = 0
+    
+# Consultivos
+if {"PLANO TV", "PLANO INTERNET"}.issubset(cons.columns):
+    cons["QTDE_CONSULTIVO"] = (cons[["PLANO TV", "PLANO INTERNET"]] != "-").sum(axis=1)
 
 
 # Tipo Produto
 def definir_tipo_servico(servico):
     tv_original = str(servico["PLANO TV"]).strip()
+    if tv_original == "SERVIÇOS AVANÇADOS":
+        tv_original = "CLARO TV+ BOX"
     internet_original = str(servico["PLANO INTERNET"]).strip()
 
     tv_tratada = tv_original
@@ -176,7 +179,7 @@ def definir_tipo_servico(servico):
     internet_vazia = internet_tratada in ["-", "nan", "None", ""]
 
     if not tv_vazia and not internet_vazia:
-        nome_final = f"{tv_tratada} + {internet_tratada}"
+        nome_final = f"{tv_tratada} & {internet_tratada}"
     elif not tv_vazia:
         nome_final = tv_tratada
     elif not internet_vazia:
@@ -189,6 +192,21 @@ def definir_tipo_servico(servico):
 
 cons[["PLANO TV", "PLANO INTERNET", "TIPO SERVIÇO"]] = cons.apply(definir_tipo_servico, axis=1)
 
+combinado = cons["TIPO SERVIÇO"].fillna("").astype(str).str.contains("&", case=False, regex=False)
+
+# Qtde TV
+total_tv = cons["TIPO SERVIÇO"].fillna("").astype(str).str.contains("TV", case=False, na=False)
+combinado_tv = total_tv.astype(int)
+somente_tv = total_tv.astype(int) * cons["QTDE_PRODUTOS"].fillna(0).astype(int)
+
+# Qtde Virtua
+total_virtua = cons["TIPO SERVIÇO"].fillna("").astype(str).str.contains("MEGA|GIGA", case=False, na=False)
+combinado_virtua = total_virtua.astype(int)
+somente_virtua = total_virtua.astype(int) * cons["QTDE_PRODUTOS"].fillna(0).astype(int)
+
+cons["QTDE_TV"] = np.where(combinado, combinado_tv, somente_tv)
+cons["QTDE_VIRTUA"] = np.where(combinado, combinado_virtua, somente_virtua)
+cons["QTDE_MESH"] = cons["QTDE_PRODUTOS"] - cons["QTDE_TV"] - cons["QTDE_VIRTUA"]
 
 # =============================================
 # MERGE DA LISTA DE ATIVOS PARA O CONSULTIVO
