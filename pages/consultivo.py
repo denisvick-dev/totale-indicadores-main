@@ -315,7 +315,7 @@ else:
     st.stop()
 
 # =========================================
-# KPIs NA TELA
+# KPIs
 # =========================================
 
 col1, col2, col3 = st.columns(3)
@@ -401,3 +401,31 @@ if not total_consultivos_por_monitor.empty:
     )
 else:
     st.info("ℹ️ Nenhum registro encontrado para os filtros selecionados.")
+    
+# ===========================================
+# GRÁFICO DE PRODUTOS
+# ===========================================
+
+st.subheader("Gráfico de Produtos")
+
+opcoes_map = {
+    "Produtos": "Total Produtos", 
+    "Mesh" : "Mesh", 
+    "TV Box" : "TV Box", 
+    "Virtua" : "Virtua"
+}
+
+coluna_selecionada = st.selectbox(
+    "Escolha o tipo de produto:",
+    opcoes_map.keys()
+)
+
+grafico = px.pie(
+    total_consultivos, 
+    names="Base", 
+    values=opcoes_map[coluna_selecionada], 
+    title=f"Distribuição de {coluna_selecionada} por Base",
+    color_discrete_sequence=["#4BE4FF", "#0068C9", "#8871EE"]
+)
+
+st.plotly_chart(grafico)
