@@ -13,7 +13,7 @@ fuso = timezone(timedelta(hours=-3))
 st.set_page_config(
     page_title="Atualização de Dados",
     page_icon="icons/atualizar-seta.png",
-    layout="wide"
+    layout="wide",
 )
 
 st.title("🔁 Atualização de Dados")
@@ -23,16 +23,16 @@ ID_PLANILHA_CONS = "1RD_A-otPHs40Sas6YNtaT271YqvkOu3W"
 ID_PLANILHA_ATIVOS = "1LQKDcLshC6XSXLBVWaEYSpxrro6uydyU9pwDLc38pEg"
 
 URL_EXPORTACAO_PROD = (
-    f"https://docs.google.com/spreadsheets/d/"
-    f"{ID_PLANILHA_PROD}/export?format=xlsx"
+    f"https://docs.google.com/spreadsheets/d/" f"{ID_PLANILHA_PROD}/export?format=xlsx"
 )
 
 URL_EXPORTACAO_CONS = (
-    f"https://docs.google.com/spreadsheets/d/"
-    f"{ID_PLANILHA_CONS}/export?format=xlsx"
+    f"https://docs.google.com/spreadsheets/d/" f"{ID_PLANILHA_CONS}/export?format=xlsx"
 )
 
-URL_EXPORTACAO_ATIVOS = f"https://docs.google.com/spreadsheets/d/{ID_PLANILHA_ATIVOS}/export?format=csv"
+URL_EXPORTACAO_ATIVOS = (
+    f"https://docs.google.com/spreadsheets/d/{ID_PLANILHA_ATIVOS}/export?format=csv"
+)
 
 # -----------------------------
 # Session State
@@ -56,20 +56,12 @@ if "ultima_atualizacao" not in st.session_state:
 
 @st.cache_data(ttl=300)
 def carregar_dados_prod():
-    return pd.read_excel(
-        URL_EXPORTACAO_PROD,
-        sheet_name=None,
-        engine="openpyxl"
-    )
+    return pd.read_excel(URL_EXPORTACAO_PROD, sheet_name=None, engine="openpyxl")
 
 
 @st.cache_data(ttl=300)
 def carregar_dados_cons():
-    return pd.read_excel(
-        URL_EXPORTACAO_CONS,
-        sheet_name=None,
-        engine="openpyxl"
-    )
+    return pd.read_excel(URL_EXPORTACAO_CONS, sheet_name=None, engine="openpyxl")
 
 
 @st.cache_data(ttl=300)
@@ -155,13 +147,48 @@ if {"PLANO TV", "PLANO INTERNET"}.issubset(cons.columns):
 
 # Produtos
 if "OBSERVACAO" in cons.columns:
-   cons["LISTA_PRODUTOS"] = cons["OBSERVACAO"].astype(str).apply(
-      lambda x: re.findall(r"\b\d{10}\b", x)
-   )
-   cons["QTDE_PRODUTOS"] = cons["LISTA_PRODUTOS"].apply(len)
+    cons["LISTA_PRODUTOS"] = (
+        cons["OBSERVACAO"].astype(str).apply(lambda x: re.findall(r"\b\d{9,12}\b", x))
+    )
+    cons["QTDE_PRODUTOS"] = cons["LISTA_PRODUTOS"].apply(len)
 else:
-   cons["LISTA_PRODUTOS"] = [[]] * len(cons)
-   cons["QTDE_PRODUTOS"] = 0
+    cons["LISTA_PRODUTOS"] = [list() for _ in range(len(cons))]
+    cons["QTDE_PRODUTOS"] = 0
+
+
+# Tipo Produto
+def definir_tipo_servico(servico):
+    tv_original = str(servico["PLANO TV"]).strip()
+    internet_original = str(servico["PLANO INTERNET"]).strip()
+
+    tv_tratada = tv_original
+    internet_tratada = internet_original
+
+    if "." in internet_original:
+        partes = internet_original.split(".", 1)
+        internet_tratada = partes[0].strip()  # Ex: "1 GIGA (FIBRA) | GLOBOPLAY"
+        tv_extraida = partes[1].strip()  # Ex: "SERVIÇOS AVANÇADOS"
+
+        if tv_original in ["-", "nan", "None", ""]:
+            tv_tratada = tv_extraida
+
+    tv_vazia = tv_tratada in ["-", "nan", "None", ""]
+    internet_vazia = internet_tratada in ["-", "nan", "None", ""]
+
+    if not tv_vazia and not internet_vazia:
+        nome_final = f"{tv_tratada} + {internet_tratada}"
+    elif not tv_vazia:
+        nome_final = tv_tratada
+    elif not internet_vazia:
+        nome_final = internet_tratada
+    else:
+        nome_final = "Sem Tipo"
+
+    return pd.Series([tv_tratada, internet_tratada, nome_final])
+
+
+cons[["PLANO TV", "PLANO INTERNET", "TIPO SERVIÇO"]] = cons.apply(definir_tipo_servico, axis=1)
+
 
 # =============================================
 # MERGE DA LISTA DE ATIVOS PARA O CONSULTIVO
@@ -193,15 +220,10 @@ with st.container(border=True):
         ultima = st.session_state["ultima_atualizacao"]
         st.metric(
             "Última Atualização",
-            ultima.strftime("%d/%m/%Y %H:%M:%S")
-            if ultima else "-"
+            ultima.strftime("%d/%m/%Y %H:%M:%S") if ultima else "-",
         )
 
-st.dataframe(
-    prod,
-    use_container_width=True,
-    hide_index=True
-)
+st.dataframe(prod, use_container_width=True, hide_index=True)
 
 # -----------------------------
 # Indicadores - Bloco 2 (Cons)
@@ -220,13 +242,7 @@ with st.container(border=True):
         ultima = st.session_state["ultima_atualizacao"]
         st.metric(
             "Última Atualização",
-            ultima.strftime("%d/%m/%Y %H:%M:%S")
-            if ultima else "-"
+            ultima.strftime("%d/%m/%Y %H:%M:%S") if ultima else "-",
         )
 
-st.dataframe(
-    cons,
-    use_container_width=True,
-    hide_index=True
-
-)
+st.dataframe(cons, use_container_width=True, hide_index=True)

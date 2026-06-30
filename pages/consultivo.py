@@ -38,13 +38,13 @@ except KeyError as erro:
     st.error(f"❌ Aba não encontrada: {erro}")
     st.stop()
 
-consultivo["Qtde. Cons."] = pd.to_numeric(
-    consultivo["QTDE_CONSULTIVO"], errors="coerce"
-).fillna(0).astype(int)
+consultivo["Qtde. Cons."] = (
+    pd.to_numeric(consultivo["QTDE_CONSULTIVO"], errors="coerce").fillna(0).astype(int)
+)
 
-consultivo["Qtde. Prod."] = pd.to_numeric(
-    consultivo["QTDE_PRODUTOS"], errors="coerce"
-).fillna(0).astype(int)
+consultivo["Qtde. Prod."] = (
+    pd.to_numeric(consultivo["QTDE_PRODUTOS"], errors="coerce").fillna(0).astype(int)
+)
 
 df = pd.DataFrame(consultivo)
 
@@ -78,17 +78,14 @@ except Exception as erro:
 df["LOGIN NETSALES"] = df["LOGIN NETSALES"].astype(str).str.strip()
 df_ativos["Login"] = df_ativos["Login"].astype(str).str.strip()
 
-df_ativos_subset = df_ativos[["Login", "Monitor", "Base"]].drop_duplicates(subset=[
-                                                                        "Login"])
+df_ativos_subset = df_ativos[["Login", "Monitor", "Base"]].drop_duplicates(
+    subset=["Login"]
+)
 
 df = df.drop(columns=["Monitor", "Base"], errors="ignore")
 
 df = pd.merge(
-    df,
-    df_ativos_subset,
-    left_on="LOGIN NETSALES",
-    right_on="Login",
-    how="left"
+    df, df_ativos_subset, left_on="LOGIN NETSALES", right_on="Login", how="left"
 )
 
 df["Monitor"] = df["Monitor"].fillna("Não Identificado").astype(str)
@@ -180,9 +177,9 @@ if "DATA" in df.columns:
             value=(data_minima, data_maxima),
             min_value=data_minima,
             max_value=data_maxima,
-            format="DD/MM/YYYY"
+            format="DD/MM/YYYY",
         )
-    
+
         if isinstance(intervalo_datas, tuple) and len(intervalo_datas) == 2:
             inicial, final = intervalo_datas
             mascara = (df["DATA"].dt.date >= inicial) & (df["DATA"].dt.date <= final)
@@ -203,47 +200,87 @@ def colorir_projecao(valor):
 def colorir(valor):
     return "background-color: #F2F2F2; font-weight: bold"  # Fundo cinza claro e negrito
 
+
 # =========================================
 # CRIAÇÃO DA TABELA DE CONSULTIVOS
 # =========================================
 
 
-colunas_obrigatorias = ["LOGIN NETSALES", "VENDEDOR",
-                        "Monitor", "Base", "Qtde. Cons.", "Qtde. Prod."]
+colunas_obrigatorias = [
+    "LOGIN NETSALES",
+    "VENDEDOR",
+    "Monitor",
+    "Base",
+    "Qtde. Cons.",
+    "Qtde. Prod.",
+]
 
 if all(col in df.columns for col in colunas_obrigatorias):
 
     total_consultivos = (
         df.groupby(["LOGIN NETSALES", "VENDEDOR", "Monitor", "Base"])[
-            ["Qtde. Cons.", "Qtde. Prod."]]
+            ["Qtde. Cons.", "Qtde. Prod."]
+        ]
         .sum()
         .reset_index()
         .sort_values("Qtde. Cons.", ascending=False)
     )
 
     # Inserção da coluna de posição (Ranking)
-    total_consultivos.insert(
-        0, "Posição", range(1, len(total_consultivos) + 1))
+    total_consultivos.insert(0, "Posição", range(1, len(total_consultivos) + 1))
 
-    total_consultivos = total_consultivos.rename(columns={
-        "Qtde. Cons.": "Total Consultivos",
-        "Qtde. Prod.": "Total Produtos"
-    })
+    total_consultivos = total_consultivos.rename(
+        columns={"Qtde. Cons.": "Total Consultivos", "Qtde. Prod.": "Total Produtos"}
+    )
 
     total_consultivos["LOGIN NETSALES"] = total_consultivos["LOGIN NETSALES"].astype(
-        str)
+        str
+    )
     total_consultivos["VENDEDOR"] = total_consultivos["VENDEDOR"].astype(str)
     total_consultivos["Monitor"] = total_consultivos["Monitor"].astype(str)
 
     total_consultivos["Posição"] = total_consultivos["Posição"].astype(int)
-    total_consultivos["Total Consultivos"] = total_consultivos["Total Consultivos"].astype(
-        int)
+    total_consultivos["Total Consultivos"] = total_consultivos[
+        "Total Consultivos"
+    ].astype(int)
     total_consultivos["Total Produtos"] = total_consultivos["Total Produtos"].astype(
-        int)
+        int
+    )
+
+    total_consultivos_por_monitor = (
+        df.groupby(["Monitor"])[["Qtde. Cons.", "Qtde. Prod."]]
+        .sum()
+        .reset_index()
+        .sort_values("Qtde. Prod.", ascending=False)
+    )
+
+    total_consultivos_por_monitor.insert(
+        0, "Posição", range(1, len(total_consultivos_por_monitor) + 1)
+    )
+
+    total_consultivos_por_monitor = total_consultivos_por_monitor.rename(
+        columns={
+            "Qtde. Cons.": "Total Consultivos",
+            "Qtde. Prod.": "Total Produtos",
+        }
+    )
+    total_consultivos_por_monitor["Monitor"] = total_consultivos_por_monitor[
+        "Monitor"
+    ].astype(str)
+    total_consultivos_por_monitor["Posição"] = total_consultivos_por_monitor[
+        "Posição"
+    ].astype(int)
+    total_consultivos_por_monitor["Total Consultivos"] = total_consultivos_por_monitor[
+        "Total Consultivos"
+    ].astype(int)
+    total_consultivos_por_monitor["Total Produtos"] = total_consultivos_por_monitor[
+        "Total Produtos"
+    ].astype(int)
 
 else:
     st.error(
-        "⚠️ As colunas necessárias para o ranking não foram encontradas na base de dados.")
+        "⚠️ As colunas necessárias para o ranking não foram encontradas na base de dados."
+    )
     st.write("**Colunas esperadas:**", colunas_obrigatorias)
     st.write("**Colunas encontradas na sua base:**", list(df.columns))
     st.stop()
@@ -260,21 +297,29 @@ equipes_maiorquezero = equipes_cons[equipes_cons["QTDE_CONSULTIVO"] > 0].shape[0
 
 total_equipes = df_ativos_subset.shape[0]
 
-qtde_cons = pd.to_numeric(
-    consultivo["QTDE_CONSULTIVO"], errors="coerce"
-).fillna(0).astype(int).shape[0]
+qtde_cons = (
+    pd.to_numeric(consultivo["QTDE_CONSULTIVO"], errors="coerce")
+    .fillna(0)
+    .astype(int)
+    .shape[0]
+)
 
-qtde_prod = pd.to_numeric(
-    consultivo["QTDE_PRODUTOS"], errors="coerce"
-).fillna(0).astype(int).shape[0]
+qtde_prod = (
+    pd.to_numeric(consultivo["QTDE_PRODUTOS"], errors="coerce")
+    .fillna(0)
+    .astype(int)
+    .shape[0]
+)
 
 if "Login" in df_ativos.columns:
-    total_equipes_filtrado = df_ativos["Login"].dropna().astype(str).str.strip().nunique()
+    total_equipes_filtrado = (
+        df_ativos["Login"].dropna().astype(str).str.strip().nunique()
+    )
 else:
     total_equipes_filtrado = 0
 
 qtde_cons_filtrado = (df[["PLANO TV", "PLANO INTERNET"]] != "-").sum().sum()
-qtde_prod_filtrado = df["QTDE_PRODUTOS"] = df["LISTA_PRODUTOS"].apply(len).sum()
+qtde_prod_filtrado = df["LISTA_PRODUTOS"].apply(len).sum()
 
 try:
     efic = 0
@@ -299,11 +344,9 @@ st.subheader("👷 Visão por Técnico")
 
 if not total_consultivos.empty:
     st.dataframe(
-        total_consultivos.style.format({
-            "Total Consultivos": "{:,.0f}",
-            "Total Produtos": "{:,.0f}"
-        })
-        .map(colorir, subset=["Total Consultivos", "Total Produtos"]),
+        total_consultivos.style.format(
+            {"Total Consultivos": "{:,.0f}", "Total Produtos": "{:,.0f}"}
+        ).map(colorir, subset=["Total Consultivos", "Total Produtos"]),
         use_container_width=False,
         height=500,
         hide_index=True,
@@ -312,6 +355,20 @@ if not total_consultivos.empty:
         #    "Total Consultivos": st.column_config.NumberColumn("Qtd. Consultivos", alignment="right"),
         #    "Total Produtos": st.column_config.NumberColumn("Qtd. Produtos", alignment="right")
         # }
+    )
+else:
+    st.info("ℹ️ Nenhum registro encontrado para os filtros selecionados.")
+
+st.subheader("Visão por Monitor")
+
+if not total_consultivos_por_monitor.empty:
+    st.dataframe(
+        total_consultivos_por_monitor.style.format(
+            {"Total Consultivos": "{:,.0f}", "Total Produtos": "{:,.0f}"}
+        ).map(colorir, subset=["Total Consultivos", "Total Produtos"]),
+        use_container_width=False,
+        height=500,
+        hide_index=True,
     )
 else:
     st.info("ℹ️ Nenhum registro encontrado para os filtros selecionados.")
